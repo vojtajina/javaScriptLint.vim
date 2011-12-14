@@ -23,13 +23,31 @@ if !exists("jslint_highlight_color")
   let jslint_highlight_color = 'DarkMagenta'
 endif
 
+if !exists("jslint_enabled")
+  let jslint_enabled = 0
+endif
+
 " set up auto commands
 autocmd BufWritePost,FileWritePost *.js call JavascriptLint()
-autocmd BufWinLeave * call s:MaybeClearCursorLineColor()
+"autocmd BufWinLeave * call s:MaybeClearCursorLineColor()
+autocmd BufLeave *.js call s:ClearJslBuffer()
 
-" Runs the current file through javascript lint and 
+function s:SetEnabled(val)
+  let g:jslint_enabled = a:val
+  call s:ClearJslBuffer()
+endfunction
+
+command JslOn :call <SID>SetEnabled(1)
+command JslOff :call <SID>SetEnabled(0)
+
+" Runs the current file through javascript lint and
 " opens a quickfix window with any warnings
-function JavascriptLint() 
+function JavascriptLint()
+  " do not run, if disabled
+  if g:jslint_enabled == 0
+    return
+  endif
+
   " run javascript lint on the current file
   let current_file = shellescape(expand('%:p'))
   let cmd_output = system(g:jslint_command . ' ' . g:jslint_command_options . ' ' . current_file)
@@ -61,12 +79,16 @@ function JavascriptLint()
 
   " if no javascript warnings are found, we revert the cursorline color
   " and close the quick fix window
-  else 
-    call s:ClearCursorLineColor()
-    if(exists("s:qfix_buffer"))
-      cclose
-      unlet s:qfix_buffer
-    endif
+  else
+    call s:ClearJslBuffer()
+  endif
+endfunction
+
+function s:ClearJslBuffer()
+  call s:ClearCursorLineColor()
+  if(exists("s:qfix_buffer"))
+    cclose
+    unlet s:qfix_buffer
   endif
 endfunction
 
